@@ -3,81 +3,65 @@ const User = require('../../models/user');
 const bcrypt = require('bcrypt');
 
 module.exports = {
-    events: () => {
-        return Event
-            .find()
-            .populate('creator')
-            .then(events => events)
-            .catch(err => {
-                console.log(err);
-                throw err
-            });
-    },
-    createEvent: (args) => {
-        const event = new Event({
-            title: args.eventInput.title,
-            description: args.eventInput.description,
-            price: +args.eventInput.price,
-            date: new Date(args.eventInput.date),
-            creator: '604cf3c0d8689181c491a7bf'
-        })
-        let createdEvent;
-        return event
-            .save()
-            .then(result => {
-                createdEvent = result;
-                return User.findById('604cf3c0d8689181c491a7bf')
-            })
-            .then(user => {
-                if (!user) {
-                    throw new Error('User not found!');
-                }
-                user.createdEvents.push(event);
-                return user.save();
 
-            })
-            .then(result => {
-                return createdEvent;
-            })
-            .catch(err => {
-                console.log(err);
-                throw err
-            });
-        return event;
+    events: async () => {
+        try {
+            const events = await Event.find().populate('creator');
+            return events;
+        } catch {
+            throw err;
+        }
     },
-    users: () => {
-        return User
-            .find()
-            .populate('createdEvents')
-            .then(users => users)
-            .catch(err => {
-                console.log(err);
-                throw err
+
+    createEvent: async (args) => {
+        try {
+            const event = new Event({
+                title: args.eventInput.title,
+                description: args.eventInput.description,
+                price: +args.eventInput.price,
+                date: new Date(args.eventInput.date),
+                creator: '604cf3c0d8689181c491a7bf'
             });
+
+            const createdEvent = await event.save();
+            const user = await User.findById('604cf3c0d8689181c491a7bf');
+            if (!user) {
+                throw new Error('User not found!');
+            }
+            user.createdEvents.push(event);
+            await user.save();
+            return createdEvent;
+        } catch {
+            console.log(err);
+            throw err;
+        };
     },
-    createUser: (args) => {
-        return User
-            .findOne({ email: args.userInput.email })
-            .then(user => {
-                if (user) {
-                    throw new Error('User exists already.');
-                }
-                return bcrypt
-                    .hash(args.userInput.password, 12);
-            })
-            .then(hashedPassword => {
-                console.log(hashedPassword);
-                const user = new User({
-                    email: args.userInput.email,
-                    password: hashedPassword
-                });
-                return user.save();
-            })
-            .then(result => {
-                return { ...result._doc, password: null }
-            })
-            .catch(err => {
-                throw err;
-            })
+
+    users: async () => {
+        try {
+            const user = await User.find().populate('createdEvents');
+            return user;
+        } catch {
+            throw err
+        }
+    },
+
+    createUser: async (args) => {
+        try {
+            let user = await User.findOne({ email: args.userInput.email });
+            if (user) {
+                throw new Error('User exists already.');
+            }
+            hashedPassword = await bcrypt.hash(args.userInput.password, 12);
+            user = new User({
+                email: args.userInput.email,
+                password: hashedPassword
+            });
+            const result = await user.save();
+            return { ...result._doc, password: null }
+        } catch {
+            throw err;
+        }
     }
+
 };
